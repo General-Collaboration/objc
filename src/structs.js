@@ -1,14 +1,16 @@
-const ref = require('ref-napi')
-const struct = require('ref-struct-di')(ref);
+const ref = require("@tigerconnect/ref-napi");
+const struct = require("ref-struct-di")(ref);
 
-const CompoundInit = Symbol('structs.CompoundInit');
+const CompoundInit = Symbol("structs.CompoundInit");
 const IsStructSymbol = Symbol();
 const structs = {};
 
 const createStructInitializer = (name, StructType) => {
-  const fields = Object.getOwnPropertyNames(StructType.fields).sort((key0, key1) => {
-    return StructType.fields[key0].offset - StructType.fields[key1].offset;
-  });
+  const fields = Object.getOwnPropertyNames(StructType.fields).sort(
+    (key0, key1) => {
+      return StructType.fields[key0].offset - StructType.fields[key1].offset;
+    }
+  );
 
   StructType.new = function (...args) {
     if (args.length === 0) {
@@ -21,9 +23,12 @@ const createStructInitializer = (name, StructType) => {
       for (const [key, value] of Object.entries(args[1])) {
         retval[key] = value;
       }
-    } else { // Array-like init
+    } else {
+      // Array-like init
       if (fields.length !== args.length) {
-        throw new TypeError(`Invalid number of fields passed to '${name}' constructor. Expected ${fields.length}, got ${args.length}`);
+        throw new TypeError(
+          `Invalid number of fields passed to '${name}' constructor. Expected ${fields.length}, got ${args.length}`
+        );
       }
       args.forEach((arg, index) => {
         retval[fields[index]] = arg;
@@ -50,7 +55,7 @@ module.exports = {
     return createStructInitializer(name, type);
   },
 
-  getStructType: name => structs[name],
+  getStructType: (name) => structs[name],
 
-  isStructFn: obj => obj[IsStructSymbol] === true
+  isStructFn: (obj) => obj[IsStructSymbol] === true,
 };

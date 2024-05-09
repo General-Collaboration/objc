@@ -1,7 +1,7 @@
 /* eslint-disable quote-props */
 
-const ref = require('ref-napi');
-const structs = require('./structs');
+const ref = require("@tigerconnect/ref-napi");
+const structs = require("./structs");
 
 // This file contains the following:
 // - The `TypeEncodingParser` class, which is a simple recursive descent parser
@@ -13,28 +13,28 @@ const structs = require('./structs');
 //   - Currently, this is only supported for primitives, pointers and structs
 
 const types = {
-  'c': 'char',
-  'i': 'int32',
-  's': 'short',
-  'l': 'long',
-  'q': 'longlong',
-  'C': 'uchar',
-  'I': 'uint32',
-  'S': 'ushort',
-  'L': 'ulong',
-  'Q': 'ulonglong',
-  'f': 'float',
-  'd': 'double',
-  'B': 'int8',
-  'v': 'void',
-  '*': 'string',
-  '@': 'pointer',
-  '#': 'pointer',
-  ':': 'pointer',
-  '?': 'pointer'
+  c: "char",
+  i: "int32",
+  s: "short",
+  l: "long",
+  q: "longlong",
+  C: "uchar",
+  I: "uint32",
+  S: "ushort",
+  L: "ulong",
+  Q: "ulonglong",
+  f: "float",
+  d: "double",
+  B: "int8",
+  v: "void",
+  "*": "string",
+  "@": "pointer",
+  "#": "pointer",
+  ":": "pointer",
+  "?": "pointer",
 };
 
-const isNumber = arg => !isNaN(parseInt(arg, 10));
+const isNumber = (arg) => !isNaN(parseInt(arg, 10));
 
 const guard = (cond, errorMessage) => {
   if (!cond) {
@@ -48,7 +48,7 @@ class DataStructure {
   }
 
   toRefType() {
-    throw new Error('should never reach here');
+    throw new Error("should never reach here");
   }
 }
 
@@ -59,7 +59,7 @@ class DataStructurePrimitive extends DataStructure {
   }
 
   toRefType() {
-    const type = this.type === 'string' ? 'CString' : this.type;
+    const type = this.type === "string" ? "CString" : this.type;
     const refType = ref.types[type];
     if (refType) return refType; // eslint-disable-line curly
     throw new Error(`Unknown type ${type}`);
@@ -88,7 +88,7 @@ class DataStructureStruct extends DataStructure {
   }
 
   static endDelimiter() {
-    return '}';
+    return "}";
   }
 }
 
@@ -102,7 +102,7 @@ class DataStructureArray extends DataStructure {
 
 class DataStructureUnion extends DataStructureStruct {
   static endDelimiter() {
-    return ')';
+    return ")";
   }
 }
 
@@ -123,49 +123,54 @@ class TypeEncodingParser {
     this.encoding = encoding;
     this.position = 0;
     const type = this.parseType();
-    guard(this.position === this.encoding.length, `Unable to parse type encoding '${encoding}'`);
+    guard(
+      this.position === this.encoding.length,
+      `Unable to parse type encoding '${encoding}'`
+    );
     return type;
   }
 
   parseType() {
     switch (this.currentToken) {
-      case '[': {
+      case "[": {
         const type = this.parseArray();
-        guard(this.currentToken === ']');
+        guard(this.currentToken === "]");
         this.step();
         return type;
       }
 
-      case '{':
-      case '(': {
-        const isUnion = this.currentToken === '(';
-        const type = this.parseStructOrUnion(isUnion ? DataStructureUnion : DataStructureStruct);
-        guard(this.currentToken === (isUnion ? ')' : '}'));
+      case "{":
+      case "(": {
+        const isUnion = this.currentToken === "(";
+        const type = this.parseStructOrUnion(
+          isUnion ? DataStructureUnion : DataStructureStruct
+        );
+        guard(this.currentToken === (isUnion ? ")" : "}"));
         this.step();
         return type;
       }
 
-      case '^':
+      case "^":
         return this.parsePointer();
 
       default: {
         let retval;
 
-        if (this.currentToken === 'r') {
+        if (this.currentToken === "r") {
           this.step();
           const type = this.parseType();
           type.isConst = true;
           retval = type;
-        } else if (this.currentToken === '@' && this.nextToken === '?') {
+        } else if (this.currentToken === "@" && this.nextToken === "?") {
           // `@?` is the encoding used for blocks. We simply return a void pointer
           this.step();
           this.step();
-          retval = new DataStructurePointer(new DataStructurePrimitive('void'));
+          retval = new DataStructurePointer(new DataStructurePrimitive("void"));
         } else if (types[this.currentToken]) {
           let type;
           const primitiveType = types[this.currentToken];
-          if (primitiveType === 'pointer') {
-            type = new DataStructurePointer(new DataStructurePrimitive('void'));
+          if (primitiveType === "pointer") {
+            type = new DataStructurePointer(new DataStructurePrimitive("void"));
           } else {
             type = new DataStructurePrimitive(primitiveType);
           }
@@ -192,11 +197,11 @@ class TypeEncodingParser {
     let length = 0;
     let _char;
     while ((_char = this.currentToken) && isNumber(_char)) {
-      length = (length * 10) + parseInt(_char, 10);
+      length = length * 10 + parseInt(_char, 10);
       this.step();
     }
 
-    guard(length > 0, 'Invalid array length');
+    guard(length > 0, "Invalid array length");
 
     const type = this.parseType();
     return new DataStructureArray(length, type);
@@ -206,13 +211,13 @@ class TypeEncodingParser {
   parseStructOrUnion(Type) {
     this.step();
 
-    let typename = '';
+    let typename = "";
     let _char;
 
-    for (; (_char = this.currentToken) && _char !== '='; this.step()) {
+    for (; (_char = this.currentToken) && _char !== "="; this.step()) {
       typename += _char;
 
-      if (_char === '?' && this.nextToken === Type.endDelimiter()) {
+      if (_char === "?" && this.nextToken === Type.endDelimiter()) {
         break;
       }
     }
@@ -246,9 +251,9 @@ module.exports = {
   DataStructureArray,
   DataStructureUnion,
 
-  coerceType: type => {
-    if (typeof type === 'string') {
-      if (type === 'pointer') {
+  coerceType: (type) => {
+    if (typeof type === "string") {
+      if (type === "pointer") {
         return ref.refType(ref.types.void);
       }
       let parseResult = cachedParseResults[type];
@@ -258,7 +263,7 @@ module.exports = {
       parseResult = parser.parse(type).toRefType();
       cachedParseResults[type] = parseResult;
       return parseResult;
-    } else if (typeof type === 'object') {
+    } else if (typeof type === "object") {
       return type;
     }
     if (structs.isStructFn(type)) {
@@ -266,5 +271,5 @@ module.exports = {
     }
 
     throw new TypeError(`Unable to coerce type from ${type}`);
-  }
+  },
 };
